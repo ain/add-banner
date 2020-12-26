@@ -18,13 +18,13 @@
     "add-banner": "bin/add-banner.js"
   },
   "engines": {
-    "node": ">=0.10.0"
+    "node": ">=8.11.3 <16.0.0"
   },
   "scripts": {
     "test": "mocha"
   },
   "dependencies": {
-    "engine": "^0.1.12",
+    "engine": "^1.0.0",
     "load-pkg": "^4.0.0",
     "commander": "^2.16.0",
     "parse-authors": "^0.2.4",
