@@ -1,66 +1,107 @@
 /*!
- * add-banner <https://github.com/jonschlinkert/add-banner>
+ * add-banner <https://github.com/ain/add-banner>
  *
- * Copyright (c) 2014-present Jon Schlinkert.
- * Licensed under the MIT license.
+ * Originally by Jon Schlinkert. Licensed under the MIT license.
  */
 
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
-const author = require('parse-authors');
-const strip = require('strip-banner');
-const Engine = require('engine');
-const load = require('load-pkg');
-const year = require('year');
+
 const read = filepath => fs.readFileSync(filepath, 'utf8');
 
 /**
- * Create the context necessary for rendering the banner template
+ * Find and parse the closest package.json, starting at `dir`.
  */
 
-const createContext = locals => {
-  const person = locals.author || '';
-  const repository = locals.homepage || locals.repository || '';
-  const homepage = repository.url ? repository.url : repository;
-  const context = {
-    author: person.name || author(person)[0].name || 'unknown',
-    homepage: homepage || 'unknown',
-    license: locals.license || 'MIT',
-    year: locals.year || year()
-  };
-  return Object.assign({}, locals, context);
+const loadPackage = dir => {
+  let current = path.resolve(dir);
+  for (;;) {
+    const candidate = path.join(current, 'package.json');
+    if (fs.existsSync(candidate)) {
+      return JSON.parse(read(candidate));
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return {};
+    current = parent;
+  }
 };
 
 /**
- * Add a comment banner to the specified JavaScript file.
+ * Extract the name from an author, which is either an object
+ * or a string like `Name <email> (url)`.
+ */
+
+const authorName = author => {
+  if (author && typeof author === 'object') return author.name;
+  if (typeof author !== 'string') return undefined;
+  return author.replace(/<[^>]*>|\([^)]*\)/g, '').trim() || undefined;
+};
+
+/**
+ * Create the context necessary for rendering the banner template.
+ */
+
+const createContext = locals => {
+  const repository = locals.homepage || locals.repository || '';
+  const homepage = repository.url ? repository.url : repository;
+  return Object.assign({}, locals, {
+    author: authorName(locals.author) || 'unknown',
+    homepage: homepage || 'unknown',
+    license: locals.license || 'MIT',
+    year: locals.year || new Date().getFullYear()
+  });
+};
+
+/**
+ * Render a template. Only `<%= path.to.value %>` (and `<%- ... %>`)
+ * interpolation is supported; template content is never evaluated as code.
+ */
+
+const render = (template, context) => template.replace(
+  /<%[=-]\s*([\w$]+(?:\.[\w$]+)*)\s*%>/g,
+  (match, key) => {
+    let value = context;
+    for (const part of key.split('.')) {
+      if (value === null || typeof value !== 'object' || !Object.prototype.hasOwnProperty.call(value, part)) {
+        return '';
+      }
+      value = value[part];
+    }
+    return value === undefined || value === null ? '' : String(value);
+  }
+);
+
+/**
+ * Remove an existing leading `/*! ... *\/` banner comment.
+ */
+
+const stripBanner = str => str.replace(/^\s*\/\*![\s\S]*?\*\/\s*/, '');
+
+/**
+ * Return the content of `filepath` prefixed with a rendered banner.
  *
  * ```js
  * const banner = require('add-banner');
  * banner('index.js');
- *
- * // Specify a custom banner template to use:
- * banner('index.js', { banner: 'my-banner.tmpl' });
- *
- * // Define custom locals to use when rendering the template
- * banner('index.js', { name: 'foo', username: 'jonschlinkert' });
+ * banner('index.js', { template: 'my-banner.tmpl' });
+ * banner('index.js', { name: 'foo' });
  * ```
- * @param  {String} `filepath` The file to update with a banner.
- * @param  {Object} `options` Pass a custom banner template to `banner`, or extend the context passed to templates. By default package.json is used, any property added to the options object will extend the default object (package.json) and will be passed to templates as context.
+ * @param  {String} `filepath` The file to prefix with a banner.
+ * @param  {Object} `options` `template` is the path to a template file; every other property extends the context (package.json) passed to the template.
  * @return {String}
  */
 
-module.exports = function(str, options = {}) {
-  const engine = new Engine(options);
-  const pkg = load.sync(options);
-  const tmpl = read(options.template || path.join(__dirname, 'banner.tmpl'));
-  const context = createContext(Object.assign({}, pkg, options));
-  const fn = engine.compile(tmpl, options);
-  const banner = fn(context);
-  let content = strip(read(str));
+module.exports = function(filepath, options = {}) {
+  const pkg = loadPackage(options.cwd || process.cwd());
+  const template = read(options.template || path.join(__dirname, 'banner.tmpl'));
+  const banner = render(template, createContext(Object.assign({}, pkg, options)));
+  let content = stripBanner(read(filepath));
   if (content[0] === '\n' && banner.slice(-1) === '\n') {
     content = content.slice(1);
   }
   return banner + content;
 };
+
+module.exports.render = render;

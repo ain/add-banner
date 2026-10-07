@@ -1,60 +1,35 @@
-# add-banner [![NPM version](https://img.shields.io/npm/v/add-banner.svg?style=flat)](https://www.npmjs.com/package/add-banner) [![NPM monthly downloads](https://img.shields.io/npm/dm/add-banner.svg?style=flat)](https://npmjs.org/package/add-banner) [![NPM total downloads](https://img.shields.io/npm/dt/add-banner.svg?style=flat)](https://npmjs.org/package/add-banner) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/add-banner.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/add-banner)
+# add-banner
 
-> Add a banner to a string. Banners are just Lo-Dash/underscore templates, if a custom one isn't defined a default will be used.
+> Add a license banner to a file. Zero dependencies; templates use simple `<%= value %>` interpolation.
 
-Please consider following this project's author, [Jon Schlinkert](https://github.com/jonschlinkert), and consider starring the project to show your :heart: and support.
-
-## Install
-
-Install with [npm](https://www.npmjs.com/):
-
-```sh
-$ npm install --save add-banner
-```
+This fork replaces the original `engine`/`load-pkg`/`parse-authors`/`strip-banner`/`year`/`minimist` dependency tree (which carried known vulnerabilities, e.g. via Lo-Dash templates) with a small dependency-free implementation.
 
 ## Context and templates
 
-* package.json is used for context
-* the `options` object can be used to extend the context (package.json) passed to templates
-* Banner templates are just Lo-Dash/Underscore templates. Anything that works with those libs should work in banner templates.
+* The closest `package.json` is used for context
+* The `options` object extends the context passed to templates
+* Templates support only `<%= path.to.value %>` / `<%- path.to.value %>` interpolation. Template content is never evaluated as code; unknown values render as empty strings.
+* An existing leading `/*! ... */` comment is replaced, so running twice is idempotent.
 
 ## API
 
-### Example usage
-
-Pass a file path to the main export:
-
 ```js
 const banner = require('add-banner');
-console.log(banner('./index.js'));
+banner('./index.js');                               // default template
+banner('./index.js', { template: 'banner.tmpl' });  // custom template
 ```
 
-Results in the string:
-
-```js
-/*!
- * banner-cli <https://github.com/jonschlinkert/banner-cli>
- *
- * Copyright (c) 2014-present Jon Schlinkert.
- * Licensed under the MIT license.
- */
-
-module.exports = () => {};
-```
-
-### CLI
+## CLI
 
 ```
-$ add-banner --help
+Usage: add-banner [options] <file...>
 
-  Usage: add-banner [options] <pattern>
-
-  Options:
-
-    -h, --help                 output usage information
-    -V, --version              output the version number
-    -t, --template [filepath]  path to template file
+  -h, --help                 output usage information
+  -V, --version              output the version number
+  -t, --template <filepath>  path to template file
 ```
+
+Requires Node.js >= 18.3.
 
 ## About
 

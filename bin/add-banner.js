@@ -1,25 +1,38 @@
 #!/usr/bin/env node
-// vim: syntax=javascript
+
+'use strict';
 
 const fs = require('fs');
 const path = require('path');
-const load = require('load-pkg');
-const pkg = load.sync(path.join(__dirname, '..'));
-const argv = require('minimist')(process.argv.slice(2));
+const { parseArgs } = require('util');
 const banner = require('..');
 
-if (argv.version) {
-  console.log('add-banner', pkg.version);
+const { values, positionals } = parseArgs({
+  allowPositionals: true,
+  options: {
+    version: { type: 'boolean', short: 'V' },
+    help: { type: 'boolean', short: 'h' },
+    template: { type: 'string', short: 't' }
+  }
+});
+
+if (values.version) {
+  console.log('add-banner', require('../package.json').version);
   process.exit();
 }
 
-if (!argv._[0]) {
-  console.error('Command argument for files missing!');
-  process.exit(1);
+if (values.help || !positionals.length) {
+  const usage = 'Usage: add-banner [options] <file...>\n\n' +
+    '  -h, --help                 output usage information\n' +
+    '  -V, --version              output the version number\n' +
+    '  -t, --template <filepath>  path to template file';
+  (values.help ? console.log : console.error)(values.help ? usage : 'Command argument for files missing!\n\n' + usage);
+  process.exit(values.help ? 0 : 1);
 }
 
-argv._.forEach(file => {
-  if (fs.writeFile(file, banner(file, argv))) {
-    console.log('Banner added to:', file);
-  }
+const options = values.template ? { template: path.resolve(values.template) } : {};
+
+positionals.forEach(file => {
+  fs.writeFileSync(file, banner(file, options));
+  console.log('Banner added to:', file);
 });
