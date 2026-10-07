@@ -3,7 +3,7 @@
   "description": "Add a license banner to a file. Dependency-free; templates are simple <%= value %> interpolation.",
   "version": "2.0.0",
   "homepage": "https://github.com/ain/add-banner",
-  "author": "Ain Tohvri <ain@flashbit.net> (https://github.com/ain), originally by Jon Schlinkert",
+  "author": "Ain Tohvri <ain@flashbit.net> (https://github.com/ain)",
   "repository": "ain/add-banner",
   "bugs": {
     "url": "https://github.com/ain/add-banner/issues"
